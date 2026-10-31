@@ -1,0 +1,5 @@
+[
+  {"employee_id": 1, "employee_name": "John Prince",   "department": "Finance",         "basic_salary": 500000},
+  {"employee_id": 2, "employee_name": "Marie Ishinwe", "department": "Human Resources", "basic_salary": 600000},
+  {"employee_id": 3, "employee_name": "David Kofi",    "department": "IT",              "basic_salary": 750000}
+]

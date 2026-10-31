@@ -1,0 +1,284 @@
+---
+title: "Assignment 2:Exploring ggplot2 Geoms Functions"
+author: "Alain Tresor Uwineza"
+date: "2026-10-31"
+output:
+  html_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 7, fig.height = 4.5)
+```
+
+# Setup
+
+We load **ggplot2** and read the dataset `store_sales.csv`.
+
+The data contains 60 rows: daily sales for 3 stores (North, South, Central) over 20 days.
+Columns: `day`, `date`, `store`, `category`, `customers`, `units_sold`, `avg_price`, `revenue`, `rating`.
+
+```{r load}
+# Install once if the package is not already installed:
+# install.package("ggplot2")
+
+library(ggplot2)
+
+sales <- read.csv("store_sales.csv")
+sales$date <- as.Date(sales$date)
+
+head(sales)
+str(sales)
+```
+
+---
+
+# 1. geom_bar()
+
+**Function name:** `geom_bar()`
+
+**Short description:** Draws a bar chart where the bar height is the **count** of rows in each category (it uses `stat = "count"` by default).
+
+**What we are doing with it:** Counting how many sales records belong to each product category, split by store.
+
+```{r geom-bar}
+ggplot(sales, aes(x = category, fill = store)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Number of Sales Records per Category",
+       x = "Category", y = "Count")
+```
+
+---
+
+# 2. geom_boxplot()
+
+**Function name:** `geom_boxplot()`
+
+**Short description:** Shows the distribution of a numeric variable using the median, quartiles (the box), whiskers, and outliers.
+
+**What we are doing with it:** Comparing the spread of daily customer numbers across the three stores.
+
+```{r geom-boxplot}
+ggplot(sales, aes(x = store, y = customers, fill = store)) +
+  geom_boxplot() +
+  labs(title = "Daily Customers by Store",
+       x = "Store", y = "Customers")
+```
+
+---
+
+# 3. geom_density()
+
+**Function name:** `geom_density()`
+
+**Short description:** Draws a smoothed curve (kernel density estimate) of a numeric variable's distribution — like a smooth histogram.
+
+**What we are doing with it:** Comparing the distribution of customer ratings for each store.
+
+```{r geom-density}
+ggplot(sales, aes(x = rating, fill = store)) +
+  geom_density(alpha = 0.4) +
+  labs(title = "Distribution of Customer Ratings by Store",
+       x = "Rating", y = "Density")
+```
+
+---
+
+# 4. geom_histogram()
+
+**Function name:** `geom_histogram()`
+
+**Short description:** Splits a numeric variable into bins and draws bars showing how many values fall into each bin.
+
+**What we are doing with it:** Looking at how the number of units sold per day is distributed.
+
+```{r geom-histogram}
+ggplot(sales, aes(x = units_sold)) +
+  geom_histogram(binwidth = 10, fill = "steelblue", color = "white") +
+  labs(title = "Histogram of Units Sold per Day",
+       x = "Units Sold", y = "Frequency")
+```
+
+---
+
+# 5. geom_hline()
+
+**Function name:** `geom_hline()`
+
+**Short description:** Adds a **horizontal** reference line at a given y value (`yintercept`).
+
+**What we are doing with it:** Plotting daily customers and adding a dashed line at the overall average, so we can see which days are above or below average.
+
+```{r geom-hline}
+avg_customers <- mean(sales$customers)
+
+ggplot(sales, aes(x = day, y = customers, color = store)) +
+  geom_point() +
+  geom_hline(yintercept = avg_customers, linetype = "dashed", color = "red") +
+  labs(title = "Daily Customers with Overall Average (red line)",
+       x = "Day", y = "Customers")
+```
+
+---
+
+# 6. geom_jitter()
+
+**Function name:** `geom_jitter()`
+
+**Short description:** A scatter plot where points get a small random offset, so overlapping points become visible.
+
+**What we are doing with it:** Showing every individual rating per store without points stacking on top of each other.
+
+```{r geom-jitter}
+ggplot(sales, aes(x = store, y = rating, color = store)) +
+  geom_jitter(width = 0.2, height = 0, size = 2) +
+  labs(title = "Individual Ratings per Store (jittered)",
+       x = "Store", y = "Rating")
+```
+
+---
+
+# 7. geom_line()
+
+**Function name:** `geom_line()`
+
+**Short description:** Connects data points with lines in order of the x variable — ideal for trends over time.
+
+**What we are doing with it:** Showing how the number of customers changes over the 20 days for each store.
+
+```{r geom-line}
+ggplot(sales, aes(x = date, y = customers, color = store)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Customers Over Time by Store",
+       x = "Date", y = "Customers")
+```
+
+---
+
+# 8. geom_point()
+
+**Function name:** `geom_point()`
+
+**Short description:** Creates a scatter plot — one point per row, positioned by x and y.
+
+**What we are doing with it:** Exploring the relationship between number of customers and units sold.
+
+```{r geom-point}
+ggplot(sales, aes(x = customers, y = units_sold, color = store)) +
+  geom_point(size = 2) +
+  labs(title = "Customers vs Units Sold",
+       x = "Customers", y = "Units Sold")
+```
+
+---
+
+# 9. geom_rug()
+
+**Function name:** `geom_rug()`
+
+**Short description:** Adds small tick marks along the axes showing where each individual data value lies (a 1-D view of the data).
+
+**What we are doing with it:** Adding rug marks to the customers vs units scatter plot to show the distribution of each variable along its axis.
+
+```{r geom-rug}
+ggplot(sales, aes(x = customers, y = units_sold)) +
+  geom_point(color = "darkgreen") +
+  geom_rug(alpha = 0.6) +
+  labs(title = "Customers vs Units Sold with Rug Marks",
+       x = "Customers", y = "Units Sold")
+```
+
+---
+
+# 10. geom_smooth()
+
+**Function name:** `geom_smooth()`
+
+**Short description:** Adds a fitted trend line (e.g. linear regression with `method = "lm"`) with a shaded confidence band.
+
+**What we are doing with it:** Fitting a linear trend to see whether more customers leads to more units sold.
+
+```{r geom-smooth}
+ggplot(sales, aes(x = customers, y = units_sold)) +
+  geom_point(color = "gray40") +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Linear Trend: Customers vs Units Sold",
+       x = "Customers", y = "Units Sold")
+```
+
+---
+
+# 11. geom_text()
+
+**Function name:** `geom_text()`
+
+**Short description:** Places text labels on the plot at given x/y positions.
+
+**What we are doing with it:** Labeling each bar with the total revenue of each store.
+
+```{r geom-text}
+store_revenue <- aggregate(revenue ~ store, data = sales, FUN = sum)
+
+ggplot(store_revenue, aes(x = store, y = revenue, fill = store)) +
+  geom_col() +
+  geom_text(aes(label = round(revenue)), vjust = -0.5) +
+  labs(title = "Total Revenue per Store",
+       x = "Store", y = "Revenue")
+```
+
+---
+
+# 12. geom_violin()
+
+**Function name:** `geom_violin()`
+
+**Short description:** Combines a boxplot idea with a density curve — the width of the "violin" shows where values are concentrated.
+
+**What we are doing with it:** Comparing the shape of the units-sold distribution in each store.
+
+```{r geom-violin}
+ggplot(sales, aes(x = store, y = units_sold, fill = store)) +
+  geom_violin(trim = FALSE) +
+  labs(title = "Units Sold Distribution by Store",
+       x = "Store", y = "Units Sold")
+```
+
+---
+
+# 13. geom_vline()
+
+**Function name:** `geom_vline()`
+
+**Short description:** Adds a **vertical** reference line at a given x value (`xintercept`).
+
+**What we are doing with it:** Drawing a histogram of ratings and marking the average rating with a vertical line.
+
+```{r geom-vline}
+avg_rating <- mean(sales$rating)
+
+ggplot(sales, aes(x = rating)) +
+  geom_histogram(binwidth = 0.2, fill = "orange", color = "white") +
+  geom_vline(xintercept = avg_rating, color = "red", linewidth = 1, linetype = "dashed") +
+  labs(title = "Ratings with Average Rating (red line)",
+       x = "Rating", y = "Frequency")
+```
+
+---
+
+# Summary
+
+| Function | Main use |
+|---|---|
+| `geom_bar()` | Count of categories |
+| `geom_boxplot()` | Distribution summary (median, quartiles) |
+| `geom_density()` | Smooth distribution curve |
+| `geom_histogram()` | Binned distribution |
+| `geom_hline()` | Horizontal reference line |
+| `geom_jitter()` | Scatter with random offset |
+| `geom_line()` | Trends over time |
+| `geom_point()` | Scatter plot |
+| `geom_rug()` | Axis tick marks for each value |
+| `geom_smooth()` | Trend / regression line |
+| `geom_text()` | Text labels |
+| `geom_violin()` | Distribution shape by group |
+| `geom_vline()` | Vertical reference line |

@@ -1,0 +1,160 @@
+---
+title: "Assignment 1:Importing Data from Different Sources in R"
+author: "Alain Tresor Uwineza"
+date: "20/10/2026"
+output:
+  html_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+In this document we import the same **Employees** data from four different sources:
+
+1. A **MySQL / MariaDB database** (table `Employees` in database `transtion`)
+2. An **SPSS file** (`.sav`)
+3. A **CSV file** (`employees.csv`)
+4. A **JSON file** (`employees.json`)
+
+The data used in every source:
+
+| employee_id | employee_name | department | basic_salary |
+|---|---|---|---|
+| 1 | John Prince | Finance | 500000 |
+| 2 | Marie Ishinwe | Human Resources | 600000 |
+| 3 | David Kofi | IT | 750000 |
+
+> Keep `employees.csv` and `employees.json` in the same folder as this `.Rmd` file.
+> To create the database table, run `employees.sql` in MySQL/MariaDB first.
+
+---
+
+# Packages
+
+```{r packages}
+# Install once if the packages are not already installed:
+# install.packages(c("haven", "DBI", "RMySQL", "RMariaDB", "jsonlite"))
+
+library(haven)     # read/write SPSS files
+library(DBI)       # common database interface
+library(RMySQL)    # MySQL driver
+library(RMariaDB)  # MariaDB driver
+library(jsonlite)  # read/write JSON files
+```
+
+---
+
+# Source 1: Database (MySQL / MariaDB)
+
+**Function name:** `dbConnect()`, `dbGetQuery()`, `dbDisconnect()`
+
+**Short description:** `dbConnect()` opens a connection to a database, `dbGetQuery()` sends an SQL query and returns the result as a data frame, and `dbDisconnect()` closes the connection.
+
+**What we are doing with it:** Connecting to the local database `transtion` and importing the whole `Employees` table into R.
+
+```{r db-connect}
+Sys.setenv(MARIADB_TLS_DISABLE_PEER_VERIFICATION = "1")
+
+con <- dbConnect(
+  RMySQL::MySQL(),
+  host     = "127.0.0.1",
+  port     = 3306,
+  dbname   = "transtion",
+  user     = "root",
+  password = ""
+)
+
+# Check the connection (TRUE means it works)
+dbIsValid(con)
+```
+
+```{r db-import}
+# Step 1: Import data from the database into R
+employees <- dbGetQuery(con, "SELECT * FROM Employees")
+
+# Inspect the database data
+print(employees)
+str(employees)
+summary(employees)
+```
+
+---
+
+# Source 2: SPSS file (.sav)
+
+**Function name:** `write_sav()`, `read_sav()`
+
+**Short description:** From the **haven** package. `write_sav()` saves a data frame as an SPSS `.sav` file and `read_sav()` reads an SPSS file into R.
+
+**What we are doing with it:** Exporting the database data to `employees.sav`, then importing it back into R to check it.
+
+```{r spss-export}
+# Step 2: Export the database data to an SPSS file
+employees_db <- employees
+write_sav(employees_db, "employees.sav")
+```
+
+```{r spss-import}
+# Import the SPSS file back into R
+employees_spss <- read_sav("employees.sav")
+
+# Verify the imported SPSS data
+print(employees_spss)
+dim(employees_spss)
+str(employees_spss)
+summary(employees_spss)
+```
+
+---
+
+# Source 3: CSV file
+
+**Function name:** `read.csv()`
+
+**Short description:** A base R function that reads a comma-separated text file into a data frame. The first row is used as column names.
+
+**What we are doing with it:** Importing `employees.csv` and inspecting it.
+
+```{r csv-import}
+employees_csv <- read.csv("employees.csv")
+
+print(employees_csv)
+dim(employees_csv)
+str(employees_csv)
+summary(employees_csv)
+```
+
+We can also export the database data to a new CSV file with `write.csv()`:
+
+```{r csv-export}
+write.csv(employees, "employees_from_db.csv", row.names = FALSE)
+```
+
+---
+
+# Source 4: JSON file
+
+**Function name:** `fromJSON()`
+
+**Short description:** From the **jsonlite** package. Reads JSON text or a `.json` file and converts an array of objects into a data frame.
+
+**What we are doing with it:** Importing `employees.json` and inspecting it.
+
+```{r json-import}
+employees_json <- fromJSON("employees.json")
+
+print(employees_json)
+dim(employees_json)
+str(employees_json)
+summary(employees_json)
+```
+
+We can also export the database data to a new JSON file with `write_json()`:
+
+```{r json-export}
+write_json(employees, "employees_from_db.json", pretty = TRUE)
+```
+
