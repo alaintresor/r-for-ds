@@ -1,0 +1,51 @@
+---
+title: "Exercise 2: Two-Sample t Test (Welch)"
+author: "Alain Tresor Uwineza"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Make a function to calculate a two-sample t test, then apply it to data.
+
+## Function
+
+```{r functions}
+my_mean <- function(x) {
+  x <- x[!is.na(x)]
+  sum(x) / length(x)
+}
+
+my_var <- function(x) {
+  x <- x[!is.na(x)]
+  sum((x - my_mean(x))^2) / (length(x) - 1)
+}
+
+my_t_test <- function(x, y) {
+  nx <- length(x); ny <- length(y)
+  vx <- my_var(x); vy <- my_var(y)
+
+  se <- sqrt(vx / nx + vy / ny)
+  t  <- (my_mean(x) - my_mean(y)) / se
+  df <- (vx / nx + vy / ny)^2 /
+        ((vx / nx)^2 / (nx - 1) + (vy / ny)^2 / (ny - 1))
+  p  <- 2 * pt(-abs(t), df)
+
+  list(t = t, df = df, p.value = p)
+}
+```
+
+## Apply to data: mpg of automatic (am = 0) vs manual (am = 1) cars
+
+```{r apply}
+auto   <- mtcars$mpg[mtcars$am == 0]
+manual <- mtcars$mpg[mtcars$am == 1]
+
+my_t_test(auto, manual)
+
+# Compare: t, df, and p-value should match
+t.test(auto, manual)
+```
+
