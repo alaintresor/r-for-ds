@@ -1,0 +1,155 @@
+---
+title: "Homework: Multiple Linear Regression on the mtcars Data"
+output:
+  html_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# 1. Data set and question
+
+**Data:** `mtcars`, built into R. It has 32 cars (1973-74 models) from *Motor Trend* magazine.
+
+**Question:** What predicts a car's fuel economy (`mpg`, miles per gallon)?
+
+**Response:** `mpg`
+
+**Predictors:**
+
+| Variable | Meaning |
+|---|---|
+| `wt` | Weight (1000 lbs) |
+| `hp` | Gross horsepower |
+| `qsec` | Time for a quarter mile (seconds); higher means slower acceleration |
+| `am` | Transmission: automatic or manual |
+
+```{r data}
+d <- mtcars
+d$am <- factor(d$am, labels = c("automatic", "manual"))
+
+str(d[, c("mpg", "wt", "hp", "qsec", "am")])
+summary(d[, c("mpg", "wt", "hp", "qsec", "am")])
+```
+
+# 2. Exploratory look
+
+```{r eda, fig.height=6}
+pairs(d[, c("mpg", "wt", "hp", "qsec")], pch = 19, col = "steelblue",
+      main = "Pairwise scatterplots")
+
+round(cor(d[, c("mpg", "wt", "hp", "qsec")]), 2)
+
+boxplot(mpg ~ am, data = d, col = c("grey80", "lightblue"),
+        ylab = "mpg", main = "mpg by transmission")
+```
+
+**Observations:**
+
+- `mpg` falls strongly as `wt` (r = -0.87) and `hp` (r = -0.78) increase.
+- `wt` and `hp` are correlated with each other (r = 0.66), and `hp` and `qsec` are correlated too (r = -0.71). This is a warning about multicollinearity, which we check in Section 6.
+- Manual cars have higher mpg on average, but manual cars are also lighter, so we need the regression to separate these effects.
+
+# 3. Fit the model
+
+$$
+\text{mpg} = \beta_0 + \beta_1\,\text{wt} + \beta_2\,\text{hp} + \beta_3\,\text{qsec} + \beta_4\,\text{manual} + \varepsilon
+$$
+
+```{r fit}
+m <- lm(mpg ~ wt + hp + qsec + am, data = d)
+summary(m)
+confint(m)
+```
+
+# 4. Interpretation of the results
+
+## Coefficients
+
+Each slope is the expected change in `mpg` for a one-unit increase in that predictor, **holding the other predictors constant**.
+
+| Term | Estimate | p-value | Interpretation |
+|---|---|---|---|
+| Intercept | 17.44 | 0.072 | Predicted mpg for an automatic car with wt = 0, hp = 0, qsec = 0. This is outside the data range, so it has no practical meaning. |
+| `wt` | -3.24 | 0.001 | Each extra 1000 lbs lowers mpg by about 3.2, holding hp, qsec and transmission fixed. Significant; 95% CI: -5.06 to -1.41. |
+| `hp` | -0.018 | 0.223 | Each extra horsepower lowers mpg by about 0.02, holding the others fixed. Not significant; the CI (-0.047 to 0.011) includes 0. |
+| `qsec` | 0.81 | 0.076 | A car that is 1 second slower over the quarter mile gets about 0.8 more mpg, holding the others fixed. Only weak evidence (p < 0.10). |
+| `am` (manual) | 2.93 | 0.046 | Manual cars average about 2.9 more mpg than automatics with the same weight, hp and qsec. Significant at 5%; the CI (0.06 to 5.79) is wide. |
+
+**Take-away:** weight is the strongest predictor. Once weight is in the model, horsepower adds little.
+
+## Overall fit
+
+- **R² = 0.858:** the four predictors together explain about 86% of the variation in mpg.
+- **Adjusted R² = 0.837:** the same figure penalized for the number of predictors, which is the fairer measure when comparing models.
+- **Residual standard error = 2.44:** predictions are typically off by about 2.4 mpg.
+- **F-test:** F = 40.7 on 4 and 27 df, p < 0.001. At least one predictor is related to mpg, so the model is far better than using the mean alone.
+
+# 5. Check the assumptions
+
+```{r diagnostics, fig.height=7}
+par(mfrow = c(2, 2))
+plot(m)
+par(mfrow = c(1, 1))
+
+shapiro.test(resid(m))
+```
+
+- **Residuals vs Fitted:** there is no strong curve or funnel shape, so linearity and constant variance look reasonable.
+- **Normal Q-Q:** points lie close to the line, and the Shapiro-Wilk test (p = 0.071) does not reject normality at 5%.
+- **Leverage:** no single car stands out strongly, though with only 32 observations a few points can have noticeable influence.
+
+# 6. Multicollinearity
+
+Variance inflation factors (VIF), computed by hand so no extra package is needed:
+
+```{r vif}
+X <- model.matrix(m)[, -1]
+vif <- sapply(colnames(X), function(j) {
+  r2 <- summary(lm(X[, j] ~ X[, colnames(X) != j]))$r.squared
+  1 / (1 - r2)
+})
+round(vif, 2)
+```
+
+All VIFs are below 5 (`hp` is highest at about 4.9). That is not severe, but it is high enough to explain why `hp` and `qsec` are not significant: they overlap with `wt` and with each other, so each one's *unique* contribution is small.
+
+# 7. Simplify the model
+
+`hp` is not significant, so test whether dropping it hurts the fit:
+
+```{r reduced}
+r <- lm(mpg ~ wt + qsec + am, data = d)
+summary(r)
+
+anova(r, m)          # F-test: is hp needed?
+AIC(m, r)
+```
+
+- The F-test (p = 0.223) shows that `hp` does not significantly improve the model.
+- AIC is essentially the same (154.3 vs 154.1), and adjusted R² is almost unchanged (0.834 vs 0.837).
+- In the reduced model, `wt` (p < 0.001), `qsec` (p < 0.001) and `am` (p = 0.047) are all significant. Once the overlapping `hp` is removed, `qsec` becomes clearly significant.
+
+The simpler model `mpg ~ wt + qsec + am` is preferable: it fits about as well with fewer predictors.
+
+# 8. Prediction example
+
+Predict mpg for a manual car weighing 3000 lbs, with 120 hp and a quarter-mile time of 18 seconds:
+
+```{r predict}
+nd <- data.frame(wt = 3, hp = 120, qsec = 18,
+                 am = factor("manual", levels = levels(d$am)))
+
+predict(m, nd, interval = "confidence")   # for the average of such cars
+predict(m, nd, interval = "prediction")   # for one individual car
+```
+
+The predicted mpg is about 23.1. We are 95% confident that the *average* mpg of such cars is between about 21.3 and 24.9, but an *individual* car could plausibly land anywhere between about 17.8 and 28.4.
+
+# 9. Conclusion and limitations
+
+- Weight is the dominant driver of fuel economy: about 3.2 to 3.9 fewer mpg per additional 1000 lbs, depending on the model.
+- Manual transmission is associated with roughly 3 more mpg after adjusting for weight and the other predictors.
+- The model explains about 86% of the variation in mpg and meets the main regression assumptions reasonably well.
+- **Limitations:** the sample is only 32 cars from the 1970s, so the results may not apply to modern cars. The data are observational, so these are associations, not proof of cause and effect. For example, manual cars may differ from automatics in ways not measured here.
